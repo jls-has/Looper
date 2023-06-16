@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://b8dqnbpwmego3"]
+
+[ext_resource type="Script" path="res://VolumeControl.gd" id="1_rs03q"]
+
+[node name="VolumeSlider" type="HSlider"]
+max_value = 1.0
+step = 0.001
+script = ExtResource("1_rs03q")
