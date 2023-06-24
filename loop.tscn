@@ -1,0 +1,52 @@
+[gd_scene load_steps=2 format=3 uid="uid://veuv6khnbd3e"]
+
+[ext_resource type="Script" path="res://Loop.gd" id="1_36280"]
+
+[node name="Loop" type="HBoxContainer"]
+script = ExtResource("1_36280")
+
+[node name="Record" type="Button" parent="."]
+layout_mode = 2
+toggle_mode = true
+text = "Record"
+
+[node name="Play" type="Button" parent="."]
+layout_mode = 2
+disabled = true
+toggle_mode = true
+text = "Play"
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 2
+text = " Loop Length: "
+
+[node name="LoopLength" type="OptionButton" parent="."]
+layout_mode = 2
+
+[node name="Name" type="LineEdit" parent="."]
+layout_mode = 2
+
+[node name="Waveform" type="ColorRect" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Playhead" type="Line2D" parent="Waveform"]
+points = PackedVector2Array(0, 0, 0, 20)
+width = 5.0
+default_color = Color(0, 1, 1, 1)
+
+[node name="Save" type="Button" parent="."]
+layout_mode = 2
+text = "Save"
+
+[node name="MyLoop" type="AudioStreamPlayer" parent="."]
+
+[node name="SaveFileDialog" type="FileDialog" parent="."]
+size = Vector2i(500, 500)
+ok_button_text = "Save"
+access = 2
+
+[connection signal="toggled" from="Record" to="." method="_on_record_toggled"]
+[connection signal="toggled" from="Play" to="." method="_on_play_toggled"]
+[connection signal="pressed" from="Save" to="." method="_on_save_pressed"]
+[connection signal="file_selected" from="SaveFileDialog" to="." method="_on_save_file_dialog_file_selected"]

@@ -1,9 +1,9 @@
 extends Control
 
-var capture : AudioEffect
+
 var recording : bool
 var printed : bool = false
-var num_loops := 1
+
 
 var mic_index: int
 var input_spectrum : AudioEffectInstance
@@ -11,10 +11,21 @@ var input_spectrum : AudioEffectInstance
 func _ready() -> void:
 	mic_index = AudioServer.get_bus_index("Microphone")
 	$VBoxContainer/HBoxContainer/MonitorInput.button_pressed = AudioServer.is_bus_mute(mic_index)
-	
 	input_spectrum = AudioServer.get_bus_effect_instance(mic_index,1)
+	set_audioserver_mix_rate()
 	
+func set_audioserver_mix_rate()->void:
+	Global.audioserver_mix_rate = AudioServer.get_mix_rate()
+	$VBoxContainer/LabelAudioServerMixRate.text = "AudioServer_Mix_Rate: " + str(Global.audioserver_mix_rate)
 	
 func _on_monitor_input_toggled(button_pressed: bool) -> void:
 	AudioServer.set_bus_mute(mic_index, button_pressed)
+
+
+
+func _on_audio_input_option_button_item_selected(index: int) -> void:
+	set_audioserver_mix_rate()
+
+func _on_audio_output_option_button_2_item_selected(index: int) -> void:
+	set_audioserver_mix_rate()
 

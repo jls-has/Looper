@@ -1,13 +1,19 @@
-[gd_scene load_steps=8 format=3 uid="uid://beujo75sfrs56"]
+[gd_scene load_steps=9 format=3 uid="uid://beujo75sfrs56"]
 
 [ext_resource type="Script" path="res://AudioInputOptionButton.gd" id="1_kvtby"]
 [ext_resource type="Script" path="res://Looper.gd" id="1_w8q4m"]
 [ext_resource type="Script" path="res://AudioOutputOptionButton2.gd" id="2_qqhrp"]
 [ext_resource type="PackedScene" uid="uid://b8dqnbpwmego3" path="res://volume_slider.tscn" id="3_8m5rf"]
-[ext_resource type="Script" path="res://Loop.gd" id="4_olwa4"]
 [ext_resource type="Script" path="res://VolumeBar.gd" id="5_0cpto"]
+[ext_resource type="PackedScene" uid="uid://veuv6khnbd3e" path="res://loop.tscn" id="6_djsil"]
 
 [sub_resource type="AudioStreamMicrophone" id="AudioStreamMicrophone_2cahy"]
+
+[sub_resource type="AudioStreamWAV" id="AudioStreamWAV_twggt"]
+format = 1
+loop_mode = 1
+mix_rate = 4800
+stereo = true
 
 [node name="Looper" type="Control"]
 layout_mode = 3
@@ -39,6 +45,12 @@ alignment = 1
 [node name="Label" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 text = "Input/Output Controls"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="LabelAudioServerMixRate" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "AudioServer Mix Rate:"
 horizontal_alignment = 1
 uppercase = true
 
@@ -141,45 +153,19 @@ text = "Loops"
 horizontal_alignment = 1
 uppercase = true
 
-[node name="Loop" type="HBoxContainer" parent="VBoxContainer"]
-layout_mode = 2
-script = ExtResource("4_olwa4")
-
-[node name="Record" type="Button" parent="VBoxContainer/Loop"]
-layout_mode = 2
-text = "Record"
-
-[node name="Play" type="Button" parent="VBoxContainer/Loop"]
-layout_mode = 2
-disabled = true
-text = "Play"
-
-[node name="Name" type="LineEdit" parent="VBoxContainer/Loop"]
+[node name="Loop" parent="VBoxContainer" instance=ExtResource("6_djsil")]
 layout_mode = 2
 
-[node name="Waveform" type="ColorRect" parent="VBoxContainer/Loop"]
-layout_mode = 2
-size_flags_horizontal = 3
+[node name="Name" parent="VBoxContainer/Loop" index="4"]
+placeholder_text = "loopName"
 
-[node name="Playhead" type="Line2D" parent="VBoxContainer/Loop/Waveform"]
-points = PackedVector2Array(0, 0, 0, 20)
-width = 5.0
-default_color = Color(0, 1, 1, 1)
+[node name="MyLoop" parent="VBoxContainer/Loop" index="7"]
+stream = SubResource("AudioStreamWAV_twggt")
 
-[node name="Save" type="Button" parent="VBoxContainer/Loop"]
-layout_mode = 2
-disabled = true
-text = "Save"
-
-[node name="MyLoop" type="AudioStreamPlayer" parent="VBoxContainer/Loop"]
-
-[node name="Timer" type="Timer" parent="VBoxContainer/Loop"]
-wait_time = 3.0
-one_shot = true
-
+[connection signal="item_selected" from="VBoxContainer/HBoxContainer/AudioInputOptionButton" to="." method="_on_audio_input_option_button_item_selected"]
 [connection signal="item_selected" from="VBoxContainer/HBoxContainer/AudioInputOptionButton" to="VBoxContainer/HBoxContainer/AudioInputOptionButton" method="_on_item_selected"]
+[connection signal="item_selected" from="VBoxContainer/HBoxContainer/AudioOutputOptionButton2" to="." method="_on_audio_output_option_button_2_item_selected"]
 [connection signal="item_selected" from="VBoxContainer/HBoxContainer/AudioOutputOptionButton2" to="VBoxContainer/HBoxContainer/AudioOutputOptionButton2" method="_on_item_selected"]
 [connection signal="toggled" from="VBoxContainer/HBoxContainer/MonitorInput" to="." method="_on_monitor_input_toggled"]
-[connection signal="pressed" from="VBoxContainer/Loop/Record" to="VBoxContainer/Loop" method="_on_record_pressed"]
-[connection signal="pressed" from="VBoxContainer/Loop/Play" to="VBoxContainer/Loop" method="_on_play_pressed"]
-[connection signal="timeout" from="VBoxContainer/Loop/Timer" to="VBoxContainer/Loop" method="_on_timer_timeout"]
+
+[editable path="VBoxContainer/Loop"]
