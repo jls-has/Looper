@@ -12,12 +12,16 @@ var loop_num : int
 var my_bus_idx : int
 var recording := false
 var loop_data : PackedVector2Array = []
-var sample_data : PackedVector2Array = []
+var loop_segment_a : PackedVector2Array = []
+var loop_segment_b : PackedVector2Array = []
 var data_size : int
 var timer : float = 0
 var loop_bit_depth := 32
 var loop_mix_rate := 48000
 var loop_channels := 2 
+var temp_dir : String = "user://"
+var record_position : float
+
 
 @export var loop_name : String = "Loop"
 
@@ -27,6 +31,7 @@ func set_loop_length(v: float)->void:
 
 
 func _ready() -> void:
+
 	loop_num = Global.loops_ready + 1
 	loop_name += str(loop_num)
 	$Name.text = loop_name 
@@ -36,7 +41,8 @@ func _ready() -> void:
 	mic_capture = AudioServer.get_bus_effect(mic_bus, 2)
 	
 	playhead = $Waveform/Playhead
-	
+
+
 	AudioServer.add_bus()
 	my_bus_idx = AudioServer.get_bus_count() - 1
 	AudioServer.set_bus_name(my_bus_idx, loop_name)
@@ -54,94 +60,77 @@ func _ready() -> void:
 	
 func _process(delta: float) -> void:
 	if recording:
-		if loop_data.size() < data_size:
+		if loop_segment_a.size()+loop_segment_b.size() < data_size:
 			var capture_frames : int = min(data_size-loop_data.size(), mic_capture.get_frames_available())
-			loop_data.append_array(mic_capture.get_buffer(capture_frames))
 			timer += delta
+			record_position += timer
+			if record_position < loop_length:
+				loop_segment_b.append_array(mic_capture.get_buffer(capture_frames))
+			else:
+				loop_segment_a.append_array(mic_capture.get_buffer(capture_frames))
+
 		else:
+			loop_data.append_array(loop_segment_a)
+			loop_data.append_array(loop_segment_b)
 			print("recorded for ", timer, " seconds.")
 			timer = 0.0
+			playhead.position.x = 0.0
 			$Record.set_pressed(false)
-	
+			loop_segment_a = []
+			loop_segment_b = []
+		var p_position = wrapf(record_position, 0, loop_length) 
+		playhead.position.x = remap(p_position, 0, loop_length, 0, waveform_width)
 		
-		#playhead.position.x = lerp(waveform_begin, waveform_width, ($Timer.time_left/3))
-func create_sample() ->void:
-	sample_data = []
-	var byte_data : PackedByteArray = []
-#	for i in loop_data.size():
-#		var x : int = loop_data[i].y*32768
-#		var y : int = loop_data[i].y*32768
-#		#var frame := Vector2i(x,y)
-#
-#		byte_data.encode_s32(x, i*16)
-#		byte_data.encode_s32(y, i*16+8)
-	byte_data = convert_to_16bit(loop_data.to_byte_array(), 32)
-	var stream := AudioStreamWAV.new()
-	stream.set_format(AudioStreamWAV.FORMAT_16_BITS)
-	stream.set_loop_mode(AudioStreamWAV.LOOP_FORWARD)
-	stream.set_loop_end(byte_data.size()/4)
-	stream.set_mix_rate(loop_mix_rate)
-	stream.set_stereo(true)
-	stream.set_data(byte_data)
-
-	$MyLoop.set_stream(stream)
-	$Play.set_disabled(false)
-	#print($MyLoop.stream.get_data())
-	print($MyLoop.get_bus())
-	print($Myloop.get_stream())
+		
+	if $MyLoop.is_playing():
+		var p :float= $MyLoop.get_playback_position()
+		playhead.position.x = remap(p, 0.0, loop_length, 0.0, waveform_width)
 	
-func initialize_waveform()->void:
+func update_waveform_box()->void:
 	waveform_width = $Waveform.size.x
 	waveform_height = $Waveform.size.y
 	waveform_begin = $Waveform.position.x
 	playhead.points[1] = Vector2(0,waveform_height)
-
-#
-#func _on_record_pressed() -> void:
-#	if effect.is_recording_active():
-#		#sample = effect.get_recording()
-#		$Play.disabled = false
-#		$Save.disabled = false
-#		#effect.set_recording_active(false)
-#		sample.set_mix_rate(48000)
-#		sample.set_format(2)
-#		sample.set_stereo(false)
-#		$Record.text = "Record"
-#
-#	else:
-#		initialize_waveform()
-#		$Play.disabled = true
-#		$Save.disabled = true
-#		#effect.set_recording_active(true)
-#		$Record.text = "Stop"
-#		$Timer.start()
-#
-
-
+	playhead.position.x = 0.0
 
 
 func _on_record_toggled(button_pressed: bool) -> void:
 	recording = button_pressed
+	update_waveform_box()
+	
 	if button_pressed:
+
 		loop_data = []
 		mic_capture.clear_buffer() 
 		data_size = loop_length * Global.audioserver_mix_rate
 		loop_bit_depth = 32
 		loop_channels = 2
 		loop_mix_rate = Global.audioserver_mix_rate
-		print("loop length: ", loop_length, "  audioserver mix rate: ", Global.audioserver_mix_rate)
-		print("data size: ", data_size)
+		$MyLoop.stop()
+		$Play.set_pressed_no_signal(false)
+		$Play.set_disabled(true)
+		if Global.sync_loop:
+			record_position = Global.sync_loop.get_playback_position()# + AudioServer.get_time_since_last_mix()
+			record_position -= AudioServer.get_output_latency() + AudioServer.get_time_to_next_mix()
+			#record_position -= mic_capture.buffer_length
+		else:
+			record_position = 0.0
+		#print("loop length: ", loop_length, "  audioserver mix rate: ", Global.audioserver_mix_rate)
+		#print("data size: ", data_size)
 	else:
 		print(loop_name, " data is this big: ", loop_data.size())
 		print("Audio Server Mix Rate: ", AudioServer.get_mix_rate())
 		print("samples per second: ", loop_data.size()/loop_length)
-		print("output latency: ", AudioServer.get_output_latency())
-		var temp_path : String = "user://"+loop_name+".wav"
-		create_sample()
-		#create_wav(temp_path)
-		#var play_stream : AudioStreamWAV = load(temp_path)
-		#$MyLoop.set_stream(play_stream)
-		#$Play.set_disabled(false)
+		#print("output latency: ", AudioServer.get_output_latency())
+		
+		var temp_path : String = temp_dir+loop_name+".wav"
+		#create_sample()
+		create_wav(temp_path)
+		draw_waveform()
+		var audio_loader := AudioLoader.new()
+		var play_stream : AudioStreamWAV = audio_loader.loadfile(temp_path)
+		$MyLoop.set_stream(play_stream)
+		$Play.set_disabled(false)
 
 #	if mic_record.is_recording_active():
 #		$Record.set_pressed_no_signal(false)
@@ -198,7 +187,20 @@ func create_wav(path: String)->void:
 	file.store_32(data_size)
 	var data : PackedByteArray = loop_data.to_byte_array()
 
-
+func draw_waveform()->void:
+	var left_line : Line2D = $Waveform/left_wave
+	var right_line : Line2D = $Waveform/right_wave
+	left_line.clear_points()
+	right_line.clear_points()
+	var points : int = loop_data.size()
+	for p in points:
+		var d : Vector2 = loop_data[p]
+		var x : float = remap(p, 0, points, 0, waveform_width)
+		var l_y : float = remap(d.x, -1, 1, 0, waveform_height)
+		var r_y : float = remap(d.y, -1, 1, 0, waveform_height)
+		left_line.add_point(Vector2(x,l_y))
+		right_line.add_point(Vector2(x, r_y))
+		
 func _on_save_pressed() -> void:
 	if loop_data.size() == 0:
 		print("No data to save")
@@ -216,37 +218,22 @@ func _on_save_file_dialog_file_selected(path: String) -> void:
 
 func _on_play_toggled(button_pressed: bool) -> void:
 	if button_pressed:
-		$MyLoop.play()
+		#$MyLoop.play()
+		for l in get_tree().get_nodes_in_group("loop_audiostream"):
+			l.play()
 	else:
 		$MyLoop.stop()
-	print("loop playing: ", $MyLoop.is_playing())
+	print(loop_name, " playing: ", $MyLoop.is_playing())
 	
-func convert_to_16bit(data: PackedByteArray, from: int) -> PackedByteArray:
-	#from https://github.com/Gianclgar/GDScriptAudioImport/blob/master/GDScriptAudioImport.gd
-	print("converting to 16-bit from %d" % from)
-	var time = Time.get_ticks_msec()
-	# 24 bit .wav's are typically stored as integers
-	# so we just grab the 2 most significant bytes and ignore the other
-	if from == 24:
-		var j = 0
-		for i in range(0, data.size(), 3):
-			data[j] = data[i+1]
-			data[j+1] = data[i+2]
-			j += 2
-		data.resize(data.size() * 2 / 3)
-	# 32 bit .wav's are typically stored as floating point numbers
-	# so we need to grab all 4 bytes and interpret them as a float first
-	if from == 32:
-		var spb := StreamPeerBuffer.new()
-		var single_float: float
-		var value: int
-		for i in range(0, data.size(), 4):
-			#spb.data_array = data.subarray(i, i+3)
-			spb.data_array = data.slice(i, i+3)
-			single_float = spb.get_float()
-			value = single_float * 32768
-			data[i/2] = value
-			data[i/2+1] = value >> 8
-		data.resize(data.size() / 2)
-	print("Took %f seconds for slow conversion" % ((Time.get_ticks_msec() - time) / 1000.0))
-	return data
+func delete_wav(path:String, filename:String)->void:
+	var dir :=DirAccess.open(path)
+	var err := dir.remove(filename)
+
+func _exit_tree() -> void:
+	delete_wav(temp_dir, loop_name+".wav")
+
+func _on_sync_loop_toggled(button_pressed: bool) -> void:
+	if button_pressed:
+		Global.sync_loop = $MyLoop
+		print(Global.sync_loop)
+

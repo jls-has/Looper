@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://beujo75sfrs56"]
+[gd_scene load_steps=11 format=3 uid="uid://beujo75sfrs56"]
 
 [ext_resource type="Script" path="res://AudioInputOptionButton.gd" id="1_kvtby"]
 [ext_resource type="Script" path="res://Looper.gd" id="1_w8q4m"]
@@ -9,11 +9,15 @@
 
 [sub_resource type="AudioStreamMicrophone" id="AudioStreamMicrophone_2cahy"]
 
+[sub_resource type="ButtonGroup" id="ButtonGroup_25t5t"]
+
 [sub_resource type="AudioStreamWAV" id="AudioStreamWAV_twggt"]
 format = 1
 loop_mode = 1
 mix_rate = 4800
 stereo = true
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_34fri"]
 
 [node name="Looper" type="Control"]
 layout_mode = 3
@@ -64,14 +68,16 @@ text = "Input:  "
 
 [node name="AudioInputOptionButton" type="OptionButton" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2
-item_count = 3
+item_count = 4
 selected = 0
 popup/item_0/text = "Default"
 popup/item_0/id = 0
-popup/item_1/text = "Microphone (Steam Streaming Microphone)"
+popup/item_1/text = "Headset (MPOW-059 Hands-Free AG Audio)"
 popup/item_1/id = 1
-popup/item_2/text = "Microphone (Realtek Audio)"
+popup/item_2/text = "Microphone (Steam Streaming Microphone)"
 popup/item_2/id = 2
+popup/item_3/text = "Microphone (Realtek Audio)"
+popup/item_3/id = 3
 script = ExtResource("1_kvtby")
 
 [node name="Output" type="Label" parent="VBoxContainer/HBoxContainer"]
@@ -80,18 +86,22 @@ text = "  Output:  "
 
 [node name="AudioOutputOptionButton2" type="OptionButton" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2
-item_count = 5
+item_count = 7
 selected = 0
 popup/item_0/text = "Default"
 popup/item_0/id = 0
-popup/item_1/text = "Headphones (Oculus Virtual Audio Device)"
+popup/item_1/text = "Headset (MPOW-059 Hands-Free AG Audio)"
 popup/item_1/id = 1
-popup/item_2/text = "Speakers / Headphones (Realtek Audio)"
+popup/item_2/text = "Headphones (Oculus Virtual Audio Device)"
 popup/item_2/id = 2
-popup/item_3/text = "Speakers (Steam Streaming Microphone)"
+popup/item_3/text = "Speakers / Headphones (Realtek Audio)"
 popup/item_3/id = 3
-popup/item_4/text = "Speakers (Steam Streaming Speakers)"
+popup/item_4/text = "Speakers (Steam Streaming Microphone)"
 popup/item_4/id = 4
+popup/item_5/text = "Headphones (MPOW-059 Stereo)"
+popup/item_5/id = 5
+popup/item_6/text = "Speakers (Steam Streaming Speakers)"
+popup/item_6/id = 6
 script = ExtResource("2_qqhrp")
 
 [node name="MonitorInput" type="CheckButton" parent="VBoxContainer/HBoxContainer"]
@@ -156,10 +166,25 @@ uppercase = true
 [node name="Loop" parent="VBoxContainer" instance=ExtResource("6_djsil")]
 layout_mode = 2
 
-[node name="Name" parent="VBoxContainer/Loop" index="4"]
+[node name="SyncLoop" parent="VBoxContainer/Loop" index="0"]
+button_group = SubResource("ButtonGroup_25t5t")
+
+[node name="Name" parent="VBoxContainer/Loop" index="5"]
 placeholder_text = "loopName"
 
-[node name="MyLoop" parent="VBoxContainer/Loop" index="7"]
+[node name="MyLoop" parent="VBoxContainer/Loop" index="8"]
+stream = SubResource("AudioStreamWAV_twggt")
+
+[node name="Loop2" parent="VBoxContainer" instance=ExtResource("6_djsil")]
+layout_mode = 2
+
+[node name="SyncLoop" parent="VBoxContainer/Loop2" index="0"]
+button_group = SubResource("ButtonGroup_34fri")
+
+[node name="Name" parent="VBoxContainer/Loop2" index="5"]
+placeholder_text = "loopName"
+
+[node name="MyLoop" parent="VBoxContainer/Loop2" index="8" groups=["loop_stream_player"]]
 stream = SubResource("AudioStreamWAV_twggt")
 
 [connection signal="item_selected" from="VBoxContainer/HBoxContainer/AudioInputOptionButton" to="." method="_on_audio_input_option_button_item_selected"]
@@ -169,3 +194,4 @@ stream = SubResource("AudioStreamWAV_twggt")
 [connection signal="toggled" from="VBoxContainer/HBoxContainer/MonitorInput" to="." method="_on_monitor_input_toggled"]
 
 [editable path="VBoxContainer/Loop"]
+[editable path="VBoxContainer/Loop2"]

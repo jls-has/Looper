@@ -2,6 +2,8 @@ extends Node
 
 var loops_ready: int= 0
 var audioserver_mix_rate : int
+var longest_length : float 
+var sync_loop : AudioStreamPlayer
 
 
 # Called when the node enters the scene tree for the first time.
