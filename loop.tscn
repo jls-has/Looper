@@ -1,40 +1,43 @@
-[gd_scene load_steps=4 format=3 uid="uid://veuv6khnbd3e"]
+[gd_scene load_steps=5 format=3 uid="uid://veuv6khnbd3e"]
 
 [ext_resource type="Script" path="res://Loop.gd" id="1_36280"]
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_on6ap"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8f5av"]
+bg_color = Color(1, 0, 0, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_brnun"]
+bg_color = Color(1, 0, 0, 1)
 
 [sub_resource type="AudioStream" id="AudioStream_38brc"]
 
 [node name="Loop" type="HBoxContainer"]
 script = ExtResource("1_36280")
 
-[node name="SyncLoop" type="CheckBox" parent="."]
-layout_mode = 2
-button_group = SubResource("ButtonGroup_on6ap")
-
 [node name="Record" type="Button" parent="."]
 layout_mode = 2
+theme_override_styles/pressed = SubResource("StyleBoxFlat_8f5av")
 toggle_mode = true
-text = "Record"
+text = "⬤"
 
 [node name="Play" type="Button" parent="."]
 layout_mode = 2
+theme_override_styles/pressed = SubResource("StyleBoxFlat_brnun")
 disabled = true
 toggle_mode = true
-text = "Play"
-
-[node name="Label" type="Label" parent="."]
-layout_mode = 2
-text = " Loop Length: "
-
-[node name="LoopLength" type="OptionButton" parent="."]
-layout_mode = 2
+text = "▶"
 
 [node name="Name" type="LineEdit" parent="."]
 layout_mode = 2
+text = "loop_nam"
+
+[node name="nullbox" type="ColorRect" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.0
+color = Color(0.392157, 0.392157, 0.392157, 1)
 
 [node name="Waveform" type="ColorRect" parent="."]
+clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -51,6 +54,18 @@ default_color = Color(1, 0, 0, 1)
 width = 1.0
 default_color = Color(0, 0, 1, 1)
 
+[node name="nullbox2" type="ColorRect" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.0
+color = Color(0.392157, 0.392157, 0.392157, 1)
+
+[node name="Slide" type="Button" parent="."]
+layout_mode = 2
+theme_override_styles/pressed = SubResource("StyleBoxFlat_brnun")
+toggle_mode = true
+text = "⇹"
+
 [node name="Save" type="Button" parent="."]
 layout_mode = 2
 text = "Save"
@@ -63,8 +78,25 @@ size = Vector2i(500, 500)
 ok_button_text = "Save"
 access = 2
 
-[connection signal="toggled" from="SyncLoop" to="." method="_on_sync_loop_toggled"]
+[node name="RecordTimer" type="Timer" parent="."]
+wait_time = 3.0
+one_shot = true
+
+[node name="PopupPanel" type="PopupPanel" parent="RecordTimer"]
+
+[node name="Label" type="Label" parent="RecordTimer/PopupPanel"]
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 96.0
+offset_bottom = 96.0
+text = "Timer"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [connection signal="toggled" from="Record" to="." method="_on_record_toggled"]
 [connection signal="toggled" from="Play" to="." method="_on_play_toggled"]
+[connection signal="text_changed" from="Name" to="." method="_on_name_text_changed"]
+[connection signal="toggled" from="Slide" to="." method="_on_slide_toggled"]
 [connection signal="pressed" from="Save" to="." method="_on_save_pressed"]
 [connection signal="file_selected" from="SaveFileDialog" to="." method="_on_save_file_dialog_file_selected"]
+[connection signal="timeout" from="RecordTimer" to="." method="_on_record_timer_timeout"]

@@ -1,15 +1,19 @@
-[gd_scene load_steps=11 format=3 uid="uid://beujo75sfrs56"]
+[gd_scene load_steps=15 format=3 uid="uid://beujo75sfrs56"]
 
 [ext_resource type="Script" path="res://AudioInputOptionButton.gd" id="1_kvtby"]
 [ext_resource type="Script" path="res://Looper.gd" id="1_w8q4m"]
+[ext_resource type="ArrayMesh" uid="uid://3qf1pdwqeruk" path="res://kassette_obj.obj" id="2_o1b8w"]
 [ext_resource type="Script" path="res://AudioOutputOptionButton2.gd" id="2_qqhrp"]
 [ext_resource type="PackedScene" uid="uid://b8dqnbpwmego3" path="res://volume_slider.tscn" id="3_8m5rf"]
 [ext_resource type="Script" path="res://VolumeBar.gd" id="5_0cpto"]
 [ext_resource type="PackedScene" uid="uid://veuv6khnbd3e" path="res://loop.tscn" id="6_djsil"]
 
-[sub_resource type="AudioStreamMicrophone" id="AudioStreamMicrophone_2cahy"]
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_307ka"]
+dof_blur_near_enabled = true
+dof_blur_near_distance = 8192.0
+dof_blur_amount = 0.28
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_25t5t"]
+[sub_resource type="AudioStreamMicrophone" id="AudioStreamMicrophone_2cahy"]
 
 [sub_resource type="AudioStreamWAV" id="AudioStreamWAV_twggt"]
 format = 1
@@ -17,7 +21,15 @@ loop_mode = 1
 mix_rate = 4800
 stereo = true
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_34fri"]
+[sub_resource type="Theme" id="Theme_eu6w4"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wcpvs"]
+bg_color = Color(1, 0, 0, 1)
+
+[sub_resource type="Theme" id="Theme_maark"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_j32qw"]
+bg_color = Color(1, 0, 0, 1)
 
 [node name="Looper" type="Control"]
 layout_mode = 3
@@ -29,6 +41,28 @@ grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("1_w8q4m")
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(1152, 648)
+
+[node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport"]
+attributes = SubResource("CameraAttributesPractical_307ka")
+
+[node name="KassetteObj" type="MeshInstance3D" parent="SubViewportContainer/SubViewport"]
+transform = Transform3D(-1, -8.74228e-08, 3.82137e-15, 0, -4.37114e-08, -1, 8.74228e-08, -1, 4.37114e-08, -0.008, 0, -0.777)
+mesh = ExtResource("2_o1b8w")
+skeleton = NodePath("../../..")
 
 [node name="Microphone" type="AudioStreamPlayer" parent="."]
 stream = SubResource("AudioStreamMicrophone_2cahy")
@@ -72,11 +106,11 @@ item_count = 4
 selected = 0
 popup/item_0/text = "Default"
 popup/item_0/id = 0
-popup/item_1/text = "Headset (MPOW-059 Hands-Free AG Audio)"
+popup/item_1/text = "Microphone (Steam Streaming Microphone)"
 popup/item_1/id = 1
-popup/item_2/text = "Microphone (Steam Streaming Microphone)"
+popup/item_2/text = "Microphone (Realtek Audio)"
 popup/item_2/id = 2
-popup/item_3/text = "Microphone (Realtek Audio)"
+popup/item_3/text = "Microphone (H6)"
 popup/item_3/id = 3
 script = ExtResource("1_kvtby")
 
@@ -86,27 +120,29 @@ text = "  Output:  "
 
 [node name="AudioOutputOptionButton2" type="OptionButton" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2
-item_count = 7
+item_count = 6
 selected = 0
 popup/item_0/text = "Default"
 popup/item_0/id = 0
-popup/item_1/text = "Headset (MPOW-059 Hands-Free AG Audio)"
+popup/item_1/text = "Headphones (Oculus Virtual Audio Device)"
 popup/item_1/id = 1
-popup/item_2/text = "Headphones (Oculus Virtual Audio Device)"
+popup/item_2/text = "Speakers / Headphones (Realtek Audio)"
 popup/item_2/id = 2
-popup/item_3/text = "Speakers / Headphones (Realtek Audio)"
+popup/item_3/text = "Speakers (Steam Streaming Microphone)"
 popup/item_3/id = 3
-popup/item_4/text = "Speakers (Steam Streaming Microphone)"
+popup/item_4/text = "Speakers (Steam Streaming Speakers)"
 popup/item_4/id = 4
-popup/item_5/text = "Headphones (MPOW-059 Stereo)"
+popup/item_5/text = "Headphones (H6)"
 popup/item_5/id = 5
-popup/item_6/text = "Speakers (Steam Streaming Speakers)"
-popup/item_6/id = 6
 script = ExtResource("2_qqhrp")
 
 [node name="MonitorInput" type="CheckButton" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2
 text = "Mute Input:"
+
+[node name="LineEdit" type="LineEdit" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+placeholder_text = "8s"
 
 [node name="HBoxContainer4" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
@@ -166,10 +202,7 @@ uppercase = true
 [node name="Loop" parent="VBoxContainer" instance=ExtResource("6_djsil")]
 layout_mode = 2
 
-[node name="SyncLoop" parent="VBoxContainer/Loop" index="0"]
-button_group = SubResource("ButtonGroup_25t5t")
-
-[node name="Name" parent="VBoxContainer/Loop" index="5"]
+[node name="Name" parent="VBoxContainer/Loop" index="2"]
 placeholder_text = "loopName"
 
 [node name="MyLoop" parent="VBoxContainer/Loop" index="8"]
@@ -178,11 +211,19 @@ stream = SubResource("AudioStreamWAV_twggt")
 [node name="Loop2" parent="VBoxContainer" instance=ExtResource("6_djsil")]
 layout_mode = 2
 
-[node name="SyncLoop" parent="VBoxContainer/Loop2" index="0"]
-button_group = SubResource("ButtonGroup_34fri")
+[node name="Record" parent="VBoxContainer/Loop2" index="0"]
+theme = SubResource("Theme_eu6w4")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_wcpvs")
 
-[node name="Name" parent="VBoxContainer/Loop2" index="5"]
+[node name="Play" parent="VBoxContainer/Loop2" index="1"]
+theme = SubResource("Theme_maark")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_j32qw")
+
+[node name="Name" parent="VBoxContainer/Loop2" index="2"]
 placeholder_text = "loopName"
+
+[node name="Slide" parent="VBoxContainer/Loop2" index="6"]
+disabled = true
 
 [node name="MyLoop" parent="VBoxContainer/Loop2" index="8" groups=["loop_stream_player"]]
 stream = SubResource("AudioStreamWAV_twggt")

@@ -11,30 +11,36 @@ var playhead : Line2D
 var loop_num : int 
 var my_bus_idx : int
 var recording := false
+var sliding := false
+var slide_start_x : float
+var trim_frames_begin: int
+var trim_frames_end: int
 var loop_data : PackedVector2Array = []
 var loop_segment_a : PackedVector2Array = []
 var loop_segment_b : PackedVector2Array = []
-var data_size : int
+var loop_segment_c : PackedVector2Array = []
+var data_limit : int
+var segment_limit : int
 var timer : float = 0
 var loop_bit_depth := 32
 var loop_mix_rate := 48000
 var loop_channels := 2 
-var temp_dir : String = "user://"
+
 var record_position : float
+var record_start_p : float
 
 
-@export var loop_name : String = "Loop"
-
-@export var loop_length : float = 3.0 : set = set_loop_length
-func set_loop_length(v: float)->void:
-	loop_length = v
-
+@export var loop_name : String = "Loop" : set = set_loop_name
+func set_loop_name(v: String)->void:
+	delete_wav(Global.temp_dir, loop_name)
+	loop_name = v
+	$Name.set_text(loop_name) 
 
 func _ready() -> void:
 
 	loop_num = Global.loops_ready + 1
-	loop_name += str(loop_num)
-	$Name.text = loop_name 
+	set_loop_name(loop_name + str(loop_num))
+	#$Name.text = loop_name 
 	
 	var mic_bus = AudioServer.get_bus_index("Microphone")
 	mic_record = AudioServer.get_bus_effect(mic_bus, 1)
@@ -59,34 +65,114 @@ func _ready() -> void:
 	Global.loops_ready += 1
 	
 func _process(delta: float) -> void:
-	if recording:
-		if loop_segment_a.size()+loop_segment_b.size() < data_size:
-			var capture_frames : int = min(data_size-loop_data.size(), mic_capture.get_frames_available())
-			timer += delta
-			record_position += timer
-			if record_position < loop_length:
+	if $RecordTimer/PopupPanel.visible:
+		$RecordTimer/PopupPanel/Label.text = str($RecordTimer.time_left)
+	elif recording:
+		var captured_data_size : int = loop_segment_a.size()+loop_segment_b.size()
+		if captured_data_size < data_limit:
+			if captured_data_size < segment_limit:
+				var capture_frames : int = min(segment_limit-captured_data_size, mic_capture.get_frames_available())
 				loop_segment_b.append_array(mic_capture.get_buffer(capture_frames))
 			else:
+				var capture_frames : int = min(data_limit-captured_data_size, mic_capture.get_frames_available())
 				loop_segment_a.append_array(mic_capture.get_buffer(capture_frames))
+			
+			timer += delta
+			record_position += delta
+			#if record_position < loop_length:
+
+			#else:
+			#	loop_segment_a.append_array(mic_capture.get_buffer(capture_frames))
 
 		else:
+			#zero_beginning()
 			loop_data.append_array(loop_segment_a)
 			loop_data.append_array(loop_segment_b)
 			print("recorded for ", timer, " seconds.")
 			timer = 0.0
 			playhead.position.x = 0.0
 			$Record.set_pressed(false)
-			loop_segment_a = []
-			loop_segment_b = []
-		var p_position = wrapf(record_position, 0, loop_length) 
-		playhead.position.x = remap(p_position, 0, loop_length, 0, waveform_width)
+
+		var p_position = wrapf(record_position, 0, Global.loop_length) 
+		#print(record_position)
+		playhead.position.x = remap(p_position, 0, Global.loop_length, 0, waveform_width)
 		
 		
-	if $MyLoop.is_playing():
+	elif $MyLoop.is_playing():
 		var p :float= $MyLoop.get_playback_position()
-		playhead.position.x = remap(p, 0.0, loop_length, 0.0, waveform_width)
+		playhead.position.x = remap(p, 0.0, Global.loop_length, 0.0, waveform_width)
+	
+	elif sliding:
+
+		var mouse_x: = get_global_mouse_position().x
+		var mouse_dif := mouse_x-slide_start_x
+		if Input.is_action_pressed("slide_right"): slide_start_x -= 1
+		elif Input.is_action_pressed("slide_left"): slide_start_x +=1
+		var l_wave : Line2D = $Waveform/left_wave
+		
+		#var l_points : PackedVector2Array = l_wave.get_points()
+		#l_wave.position.x +=mouse_dif
+		
+		trim_frames_begin = 0
+		trim_frames_end = 0
+		var points: int = l_wave.get_point_count()
+		l_wave.position.x = mouse_dif
+		l_wave.position.x = wrap(l_wave.position.x, -waveform_width, waveform_width)
+		if Input.is_action_just_pressed("slide_end"):
+			$Slide.set_pressed(false)
+		#l_wave.position.x = clamp(l_wave.position.x, -waveform_width, waveform_width)
+#		for i in points:
+#			var pos := l_wave.get_point_position(i)
+#			pos.x+=mouse_dif
+#			if pos.x > waveform_width:
+#				trim_frames_end += 1
+#				pos.x = 0
+#				l_wave.remove_point(i)
+#				l_wave.add_point(pos,0)
+#			elif pos.x < 0.0:
+#				trim_frames_begin += 1
+#				pos.x = waveform_width
+#				l_wave.remove_point(i)
+#				l_wave.add_point(pos)
+#			else:
+#				l_wave.set_point_position(i, pos)
+#
+
+			
+
+			#if l_wave.points[i].x + mouse_dif > 
+		#for f in l_wave.points:
+		#	if f.x + mouse_dif > waveform_width:
+		#		trim_frames_end+= 1
+		#		var p :=Vector2(0, f.y)
+				
+		#	elif f.x + mouse_dif < waveform_width:
+		#		trim_frames_begin += 1
+		#print(l_wave.position)
+		#print("trim begin: ", trim_frames_begin, " trim end: ", trim_frames_end, " mouse_dif: ", mouse_dif, " waveform width: ", waveform_width)
+		#loop_segment_a.append_array(loop_segment_b)
+		#loop_segment_a.append_array(loop_segment_c)
+		#l_wave.clear_points()
+		#l_wave.set_points(loop_segment_a)
+				
+		
+func zero_fill(frames:int)->PackedVector2Array:
+	var fill_size :int = Global.loop_length * Global.audioserver_mix_rate
+	fill_size -= data_limit
+	var temp_frames : PackedVector2Array = []
+	if fill_size>0:
+		for each in fill_size:
+			temp_frames.append(Vector2.ZERO)
+	return temp_frames
 	
 func update_waveform_box()->void:
+	if Global.sync_loop == null or Global.sync_loop == $MyLoop:
+		$nullbox.set_stretch_ratio(0.0)
+		$nullbox2.set_stretch_ratio(0.0)
+#	else:
+#		if record_start_p>0.0:
+#			$
+	
 	waveform_width = $Waveform.size.x
 	waveform_height = $Waveform.size.y
 	waveform_begin = $Waveform.position.x
@@ -95,35 +181,47 @@ func update_waveform_box()->void:
 
 
 func _on_record_toggled(button_pressed: bool) -> void:
-	recording = button_pressed
+	Global.update_audioserver_mix_rate()
+
 	update_waveform_box()
 	
 	if button_pressed:
-
-		loop_data = []
+		if $Play.pressed:
+			$Play.set_pressed(false)
+		$RecordTimer.start()
+		$RecordTimer/PopupPanel.visible= true
+		await $RecordTimer.timeout
+		recording = button_pressed
+		clear_data()
 		mic_capture.clear_buffer() 
-		data_size = loop_length * Global.audioserver_mix_rate
-		loop_bit_depth = 32
-		loop_channels = 2
-		loop_mix_rate = Global.audioserver_mix_rate
+		update_wav_data()
 		$MyLoop.stop()
 		$Play.set_pressed_no_signal(false)
 		$Play.set_disabled(true)
+		$Slide.set_disabled(true)
+		data_limit = Global.loop_length * Global.audioserver_mix_rate
 		if Global.sync_loop:
 			record_position = Global.sync_loop.get_playback_position()# + AudioServer.get_time_since_last_mix()
-			record_position -= AudioServer.get_output_latency() + AudioServer.get_time_to_next_mix()
+			
+			segment_limit = (Global.loop_length - record_position) * Global.audioserver_mix_rate
+			#record_position -= AudioServer.get_output_latency() + AudioServer.get_time_to_next_mix()
 			#record_position -= mic_capture.buffer_length
 		else:
 			record_position = 0.0
+			segment_limit = data_limit
+		record_start_p = record_position
 		#print("loop length: ", loop_length, "  audioserver mix rate: ", Global.audioserver_mix_rate)
 		#print("data size: ", data_size)
 	else:
+		recording = button_pressed
+		if Global.sync_loop == null:
+			Global.sync_loop = $MyLoop
 		print(loop_name, " data is this big: ", loop_data.size())
 		print("Audio Server Mix Rate: ", AudioServer.get_mix_rate())
-		print("samples per second: ", loop_data.size()/loop_length)
+		print("samples per second: ", loop_data.size()/Global.loop_length)
 		#print("output latency: ", AudioServer.get_output_latency())
 		
-		var temp_path : String = temp_dir+loop_name+".wav"
+		var temp_path : String = Global.temp_dir+loop_name+".wav"
 		#create_sample()
 		create_wav(temp_path)
 		draw_waveform()
@@ -131,13 +229,15 @@ func _on_record_toggled(button_pressed: bool) -> void:
 		var play_stream : AudioStreamWAV = audio_loader.loadfile(temp_path)
 		$MyLoop.set_stream(play_stream)
 		$Play.set_disabled(false)
+		$Slide.set_disabled(false)
+		$Play.set_pressed(true)
 
 #	if mic_record.is_recording_active():
 #		$Record.set_pressed_no_signal(false)
 #		print("mic is already recording")
 #		return
 #	else:
-	
+
 func create_wav(path: String)->void:
 	var file = FileAccess.open(path, FileAccess.WRITE)
 	
@@ -196,10 +296,11 @@ func draw_waveform()->void:
 	for p in points:
 		var d : Vector2 = loop_data[p]
 		var x : float = remap(p, 0, points, 0, waveform_width)
-		var l_y : float = remap(d.x, -1, 1, 0, waveform_height)
-		var r_y : float = remap(d.y, -1, 1, 0, waveform_height)
+		var l_y : float = remap(d.x, 0.5, -0.5, 0, waveform_height)
+		var r_y : float = remap(d.y, 0.5, -0.5, 0, waveform_height)
 		left_line.add_point(Vector2(x,l_y))
 		right_line.add_point(Vector2(x, r_y))
+
 		
 func _on_save_pressed() -> void:
 	if loop_data.size() == 0:
@@ -210,30 +311,98 @@ func _on_save_pressed() -> void:
 		$SaveFileDialog.set_filters(PackedStringArray(["*.wav ; WAV files"]))
 		$SaveFileDialog.visible = true
 		
-
-
 func _on_save_file_dialog_file_selected(path: String) -> void:
 	pass
-
-
+	
 func _on_play_toggled(button_pressed: bool) -> void:
 	if button_pressed:
 		#$MyLoop.play()
 		for l in get_tree().get_nodes_in_group("loop_audiostream"):
-			l.play()
+			if l.is_playing():
+				l.play()
+			$MyLoop.play()
+		#$Slide.set_disabled(true)
 	else:
 		$MyLoop.stop()
+		$Slide.set_disabled(false)
 	print(loop_name, " playing: ", $MyLoop.is_playing())
 	
 func delete_wav(path:String, filename:String)->void:
 	var dir :=DirAccess.open(path)
 	var err := dir.remove(filename)
 
+func clear_data()->void:
+	loop_data = []
+	loop_segment_a = []
+	loop_segment_b = []
+
+
+func update_wav_data()->void:
+	loop_bit_depth = 32
+	loop_channels = 2
+	loop_mix_rate = Global.audioserver_mix_rate
+
 func _exit_tree() -> void:
-	delete_wav(temp_dir, loop_name+".wav")
+	delete_wav(Global.temp_dir, loop_name+".wav")
 
-func _on_sync_loop_toggled(button_pressed: bool) -> void:
+
+func _on_name_text_changed(new_text: String) -> void:
+	set_loop_name(new_text)
+
+
+func _on_slide_toggled(button_pressed: bool) -> void:
+	if $Play.pressed:
+		$Play.set_pressed(false)
+	sliding = button_pressed
+	slide_start_x = get_global_mouse_position().x
+	var left_wave :Line2D=$Waveform/left_wave 
 	if button_pressed:
-		Global.sync_loop = $MyLoop
-		print(Global.sync_loop)
+		left_wave.add_child(left_wave.duplicate())
+		left_wave.add_child(left_wave.duplicate())
+		left_wave.get_child(0).position.x -= waveform_width
+		left_wave.get_child(1).position.x += waveform_width
+	else:
+		#print("Final Position: ", $Waveform/left_wave.position)
+		for each in left_wave.get_children():
+			each.queue_free()
+		trim_frames_begin = 0
+		trim_frames_end = 0
+		loop_segment_a = []
+		loop_segment_b = []
+		loop_segment_c = []
+		var frames = left_wave.get_point_count()
+		for i in frames:
+			var pos := left_wave.get_point_position(i) +Vector2(left_wave.position.x, 0)
+			if pos.x < 0:
+				#trim_frames_begin += 1
+				loop_segment_c.append(loop_data[i])
+			elif pos.x > waveform_width:
+				loop_segment_a.append(loop_data[i])
+			else:
+				loop_segment_b.append(loop_data[i])
+				
+		left_wave.position.x = 0
+		
+		loop_data = []
+		loop_data.append_array(loop_segment_a)
+		loop_data.append_array(loop_segment_b)
+		loop_data.append_array(loop_segment_c)#
 
+		_on_record_toggled(false)
+#		loop_segment_a = []
+#		loop_segment_b = []
+#		loop_segment_c = []
+#
+#		if trim_frames_begin > 0:
+#			loop_segment_a = 
+#		elif trim_frames_end>0:
+#			pass
+		
+		#print("begin trim: ", trim_frames_begin, " end trim: ", trim_frames_end)
+			
+		
+
+
+func _on_record_timer_timeout() -> void:
+	$RecordTimer/PopupPanel.visible = false
+	

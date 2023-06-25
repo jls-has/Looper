@@ -14,13 +14,14 @@ func _ready() -> void:
 	input_spectrum = AudioServer.get_bus_effect_instance(mic_index,1)
 	set_audioserver_mix_rate()
 	
-func set_audioserver_mix_rate()->void:
-	Global.audioserver_mix_rate = AudioServer.get_mix_rate()
-	$VBoxContainer/LabelAudioServerMixRate.text = "AudioServer_Mix_Rate: " + str(Global.audioserver_mix_rate)
-	
+
 func _on_monitor_input_toggled(button_pressed: bool) -> void:
 	AudioServer.set_bus_mute(mic_index, button_pressed)
 
+func set_audioserver_mix_rate()->void:
+	await get_tree().create_timer(0.5).timeout
+	Global.update_audioserver_mix_rate()
+	$VBoxContainer/LabelAudioServerMixRate.text = "AudioServer_Mix_Rate: " + str(Global.audioserver_mix_rate)
 
 
 func _on_audio_input_option_button_item_selected(index: int) -> void:
