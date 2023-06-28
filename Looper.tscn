@@ -2,16 +2,21 @@
 
 [ext_resource type="Script" path="res://AudioInputOptionButton.gd" id="1_kvtby"]
 [ext_resource type="Script" path="res://Looper.gd" id="1_w8q4m"]
-[ext_resource type="ArrayMesh" uid="uid://3qf1pdwqeruk" path="res://kassette_obj.obj" id="2_o1b8w"]
+[ext_resource type="PackedScene" uid="uid://dems4qsp3m0k2" path="res://cassette.tscn" id="2_78fyj"]
 [ext_resource type="Script" path="res://AudioOutputOptionButton2.gd" id="2_qqhrp"]
 [ext_resource type="PackedScene" uid="uid://b8dqnbpwmego3" path="res://volume_slider.tscn" id="3_8m5rf"]
+[ext_resource type="Script" path="res://spectrograph.gd" id="3_eyd2k"]
 [ext_resource type="Script" path="res://VolumeBar.gd" id="5_0cpto"]
 [ext_resource type="PackedScene" uid="uid://veuv6khnbd3e" path="res://loop.tscn" id="6_djsil"]
+[ext_resource type="AudioStream" uid="uid://bn8ngvh2nh3ta" path="res://Mueo - Upbraid the Permitting Stars - 05 The Cavity is Small and it Glows.mp3" id="9_51rwy"]
+[ext_resource type="Script" path="res://spectrogram_labels.gd" id="10_8wsb2"]
 
 [sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_307ka"]
 dof_blur_near_enabled = true
 dof_blur_near_distance = 8192.0
 dof_blur_amount = 0.28
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hac4j"]
 
 [sub_resource type="AudioStreamMicrophone" id="AudioStreamMicrophone_2cahy"]
 
@@ -20,16 +25,6 @@ format = 1
 loop_mode = 1
 mix_rate = 4800
 stereo = true
-
-[sub_resource type="Theme" id="Theme_eu6w4"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wcpvs"]
-bg_color = Color(1, 0, 0, 1)
-
-[sub_resource type="Theme" id="Theme_maark"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_j32qw"]
-bg_color = Color(1, 0, 0, 1)
 
 [node name="Looper" type="Control"]
 layout_mode = 3
@@ -55,14 +50,27 @@ stretch = true
 transparent_bg = true
 handle_input_locally = false
 size = Vector2i(1152, 648)
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="SubViewportContainer/SubViewport"]
 attributes = SubResource("CameraAttributesPractical_307ka")
 
-[node name="KassetteObj" type="MeshInstance3D" parent="SubViewportContainer/SubViewport"]
-transform = Transform3D(-1, -8.74228e-08, 3.82137e-15, 0, -4.37114e-08, -1, 8.74228e-08, -1, 4.37114e-08, -0.008, 0, -0.777)
-mesh = ExtResource("2_o1b8w")
-skeleton = NodePath("../../..")
+[node name="cassette" parent="SubViewportContainer/SubViewport" instance=ExtResource("2_78fyj")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
+
+[node name="spectrograph" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_hac4j")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+script = ExtResource("3_eyd2k")
+enabled = true
+descalor = 500.0
+max_freq = 30000.0
 
 [node name="Microphone" type="AudioStreamPlayer" parent="."]
 stream = SubResource("AudioStreamMicrophone_2cahy")
@@ -74,13 +82,14 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -447.0
-offset_right = 447.0
-offset_bottom = 35.0
+offset_left = -352.0
+offset_right = 352.0
+offset_bottom = 186.0
 grow_horizontal = 2
 alignment = 1
 
 [node name="Label" type="Label" parent="VBoxContainer"]
+visible = false
 layout_mode = 2
 text = "Input/Output Controls"
 horizontal_alignment = 1
@@ -88,7 +97,7 @@ uppercase = true
 
 [node name="LabelAudioServerMixRate" type="Label" parent="VBoxContainer"]
 layout_mode = 2
-text = "AudioServer Mix Rate:"
+text = "AudioServer_Mix_Rate: 48000"
 horizontal_alignment = 1
 uppercase = true
 
@@ -102,16 +111,15 @@ text = "Input:  "
 
 [node name="AudioInputOptionButton" type="OptionButton" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2
-item_count = 4
+item_count = 3
 selected = 0
+fit_to_longest_item = false
 popup/item_0/text = "Default"
 popup/item_0/id = 0
 popup/item_1/text = "Microphone (Steam Streaming Microphone)"
 popup/item_1/id = 1
 popup/item_2/text = "Microphone (Realtek Audio)"
 popup/item_2/id = 2
-popup/item_3/text = "Microphone (H6)"
-popup/item_3/id = 3
 script = ExtResource("1_kvtby")
 
 [node name="Output" type="Label" parent="VBoxContainer/HBoxContainer"]
@@ -120,8 +128,9 @@ text = "  Output:  "
 
 [node name="AudioOutputOptionButton2" type="OptionButton" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2
-item_count = 6
+item_count = 5
 selected = 0
+fit_to_longest_item = false
 popup/item_0/text = "Default"
 popup/item_0/id = 0
 popup/item_1/text = "Headphones (Oculus Virtual Audio Device)"
@@ -132,17 +141,29 @@ popup/item_3/text = "Speakers (Steam Streaming Microphone)"
 popup/item_3/id = 3
 popup/item_4/text = "Speakers (Steam Streaming Speakers)"
 popup/item_4/id = 4
-popup/item_5/text = "Headphones (H6)"
-popup/item_5/id = 5
 script = ExtResource("2_qqhrp")
 
 [node name="MonitorInput" type="CheckButton" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2
 text = "Mute Input:"
 
-[node name="LineEdit" type="LineEdit" parent="VBoxContainer/HBoxContainer"]
+[node name="Minutes_Label" type="Label" parent="VBoxContainer/HBoxContainer"]
 layout_mode = 2
-placeholder_text = "8s"
+text = "  Minutes  :"
+
+[node name="Minutes_Enter" type="SpinBox" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+max_value = 5.0
+value = 1.0
+
+[node name="Seconds_Label" type="Label" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "  Seconds: "
+
+[node name="Seconds_Enter" type="SpinBox" parent="VBoxContainer/HBoxContainer"]
+layout_mode = 2
+max_value = 60.0
+value = 30.0
 
 [node name="HBoxContainer4" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
@@ -194,10 +215,15 @@ script = ExtResource("5_0cpto")
 bus_name = "Master"
 
 [node name="Label2" type="Label" parent="VBoxContainer"]
+visible = false
 layout_mode = 2
 text = "Loops"
 horizontal_alignment = 1
 uppercase = true
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 2
 
 [node name="Loop" parent="VBoxContainer" instance=ExtResource("6_djsil")]
 layout_mode = 2
@@ -205,34 +231,136 @@ layout_mode = 2
 [node name="Name" parent="VBoxContainer/Loop" index="2"]
 placeholder_text = "loopName"
 
-[node name="MyLoop" parent="VBoxContainer/Loop" index="8"]
+[node name="MyLoop" parent="VBoxContainer/Loop" index="10"]
 stream = SubResource("AudioStreamWAV_twggt")
 
-[node name="Loop2" parent="VBoxContainer" instance=ExtResource("6_djsil")]
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("9_51rwy")
+
+[node name="spectrogram_labels" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("10_8wsb2")
+
+[node name="freq_labels" type="Control" parent="spectrogram_labels"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="f_label0" type="Label" parent="spectrogram_labels/freq_labels"]
 layout_mode = 2
+offset_right = 142.0
+offset_bottom = 26.0
+size_flags_vertical = 6
+text = "75.7301992366039"
+vertical_alignment = 1
 
-[node name="Record" parent="VBoxContainer/Loop2" index="0"]
-theme = SubResource("Theme_eu6w4")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_wcpvs")
+[node name="f_label1" type="Label" parent="spectrogram_labels/freq_labels"]
+layout_mode = 2
+offset_top = 64.8
+offset_right = 142.0
+offset_bottom = 90.8
+size_flags_vertical = 6
+text = "18731.5084129753"
+vertical_alignment = 1
 
-[node name="Play" parent="VBoxContainer/Loop2" index="1"]
-theme = SubResource("Theme_maark")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_j32qw")
+[node name="f_label2" type="Label" parent="spectrogram_labels/freq_labels"]
+layout_mode = 2
+offset_top = 129.6
+offset_right = 142.0
+offset_bottom = 155.6
+size_flags_vertical = 6
+text = "13973.6065921476"
+vertical_alignment = 1
 
-[node name="Name" parent="VBoxContainer/Loop2" index="2"]
-placeholder_text = "loopName"
+[node name="f_label3" type="Label" parent="spectrogram_labels/freq_labels"]
+layout_mode = 2
+offset_top = 194.4
+offset_right = 142.0
+offset_bottom = 220.4
+size_flags_vertical = 6
+text = "10098.4351978865"
+vertical_alignment = 1
 
-[node name="Slide" parent="VBoxContainer/Loop2" index="6"]
-disabled = true
+[node name="f_label4" type="Label" parent="spectrogram_labels/freq_labels"]
+layout_mode = 2
+offset_top = 259.2
+offset_right = 142.0
+offset_bottom = 285.2
+size_flags_vertical = 6
+text = "6969.4660366814"
+vertical_alignment = 1
 
-[node name="MyLoop" parent="VBoxContainer/Loop2" index="8" groups=["loop_stream_player"]]
-stream = SubResource("AudioStreamWAV_twggt")
+[node name="f_label5" type="Label" parent="spectrogram_labels/freq_labels"]
+layout_mode = 2
+offset_top = 324.0
+offset_right = 142.0
+offset_bottom = 350.0
+size_flags_vertical = 6
+text = "4599.13860675503"
+vertical_alignment = 1
+
+[node name="f_label6" type="Label" parent="spectrogram_labels/freq_labels"]
+layout_mode = 2
+offset_top = 388.8
+offset_right = 142.0
+offset_bottom = 414.8
+size_flags_vertical = 6
+text = "2838.27896699728"
+vertical_alignment = 1
+
+[node name="f_label7" type="Label" parent="spectrogram_labels/freq_labels"]
+layout_mode = 2
+offset_top = 453.6
+offset_right = 142.0
+offset_bottom = 479.6
+size_flags_vertical = 6
+text = "1596.31129972565"
+vertical_alignment = 1
+
+[node name="f_label8" type="Label" parent="spectrogram_labels/freq_labels"]
+layout_mode = 2
+offset_top = 518.4
+offset_right = 142.0
+offset_bottom = 544.4
+size_flags_vertical = 6
+text = "772.035592262358"
+vertical_alignment = 1
+
+[node name="f_label9" type="Label" parent="spectrogram_labels/freq_labels"]
+layout_mode = 2
+offset_top = 583.2
+offset_right = 142.0
+offset_bottom = 609.2
+size_flags_vertical = 6
+text = "301.068227705427"
+vertical_alignment = 1
+
+[node name="f_label11" type="Label" parent="spectrogram_labels/freq_labels"]
+layout_mode = 2
+offset_top = 648.0
+offset_right = 142.0
+offset_bottom = 674.0
+size_flags_vertical = 6
+text = "5.06589924845842"
+vertical_alignment = 1
+
+[node name="lines" type="Node2D" parent="spectrogram_labels"]
 
 [connection signal="item_selected" from="VBoxContainer/HBoxContainer/AudioInputOptionButton" to="." method="_on_audio_input_option_button_item_selected"]
 [connection signal="item_selected" from="VBoxContainer/HBoxContainer/AudioInputOptionButton" to="VBoxContainer/HBoxContainer/AudioInputOptionButton" method="_on_item_selected"]
 [connection signal="item_selected" from="VBoxContainer/HBoxContainer/AudioOutputOptionButton2" to="." method="_on_audio_output_option_button_2_item_selected"]
 [connection signal="item_selected" from="VBoxContainer/HBoxContainer/AudioOutputOptionButton2" to="VBoxContainer/HBoxContainer/AudioOutputOptionButton2" method="_on_item_selected"]
 [connection signal="toggled" from="VBoxContainer/HBoxContainer/MonitorInput" to="." method="_on_monitor_input_toggled"]
+[connection signal="value_changed" from="VBoxContainer/HBoxContainer/Minutes_Enter" to="." method="_on_minutes_enter_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/HBoxContainer/Seconds_Enter" to="." method="_on_seconds_enter_value_changed"]
 
 [editable path="VBoxContainer/Loop"]
-[editable path="VBoxContainer/Loop2"]

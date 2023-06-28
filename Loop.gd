@@ -8,13 +8,15 @@ var waveform_width : int
 var waveform_height : int
 var waveform_begin : int
 var playhead : Line2D 
-var loop_num : int 
+var volume_slider : Slider
+var loop_idx : int 
 var my_bus_idx : int
 var recording := false
 var sliding := false
 var slide_start_x : float
 var trim_frames_begin: int
 var trim_frames_end: int
+var loop_length: float
 var loop_data : PackedVector2Array = []
 var loop_segment_a : PackedVector2Array = []
 var loop_segment_b : PackedVector2Array = []
@@ -35,25 +37,31 @@ func set_loop_name(v: String)->void:
 	delete_wav(Global.temp_dir, loop_name)
 	loop_name = v
 	$Name.set_text(loop_name) 
+	AudioServer.set_bus_name(my_bus_idx, loop_name)
+	
 
 func _ready() -> void:
-
-	loop_num = Global.loops_ready + 1
-	set_loop_name(loop_name + str(loop_num))
+	AudioServer.add_bus()
+	my_bus_idx = AudioServer.get_bus_count() - 1
+	var sa := AudioEffectSpectrumAnalyzer.new()
+	AudioServer.add_bus_effect(my_bus_idx,sa)
+	
+	$Loop_Length.max_value = 5*60+60
+	$Loop_Length.set_value(Global.master_length)
+	
+	playhead = $Waveform/Playhead
+	volume_slider = $Waveform/HBoxContainer/VolumeSlider
+	volume_slider.bus_index = my_bus_idx
+	
+	loop_idx = Global.loops_ready
+	Global.loops_ready +=1
+	set_loop_name(loop_name + str(loop_idx))
 	#$Name.text = loop_name 
 	
 	var mic_bus = AudioServer.get_bus_index("Microphone")
 	mic_record = AudioServer.get_bus_effect(mic_bus, 1)
 	mic_capture = AudioServer.get_bus_effect(mic_bus, 2)
 	
-	playhead = $Waveform/Playhead
-
-
-	AudioServer.add_bus()
-	my_bus_idx = AudioServer.get_bus_count() - 1
-	AudioServer.set_bus_name(my_bus_idx, loop_name)
-	var sa := AudioEffectSpectrumAnalyzer.new()
-	AudioServer.add_bus_effect(my_bus_idx,sa)
 	#$MyLoop.set_bus(loop_name)
 	
 	$SaveFileDialog.position = get_viewport_rect().size/2 - size/2
@@ -62,7 +70,6 @@ func _ready() -> void:
 #	for b in 4:
 #		print("Audio Bus idx ", b, " is named ", AudioServer.get_bus_name(b))
 
-	Global.loops_ready += 1
 	
 func _process(delta: float) -> void:
 	if $RecordTimer/PopupPanel.visible:
@@ -93,14 +100,14 @@ func _process(delta: float) -> void:
 			playhead.position.x = 0.0
 			$Record.set_pressed(false)
 
-		var p_position = wrapf(record_position, 0, Global.loop_length) 
+		var p_position = wrapf(record_position, 0, loop_length) 
 		#print(record_position)
-		playhead.position.x = remap(p_position, 0, Global.loop_length, 0, waveform_width)
+		playhead.position.x = remap(p_position, 0, loop_length, 0, waveform_width)
 		
 		
 	elif $MyLoop.is_playing():
 		var p :float= $MyLoop.get_playback_position()
-		playhead.position.x = remap(p, 0.0, Global.loop_length, 0.0, waveform_width)
+		playhead.position.x = remap(p, 0.0, loop_length, 0.0, waveform_width)
 	
 	elif sliding:
 
@@ -157,7 +164,7 @@ func _process(delta: float) -> void:
 				
 		
 func zero_fill(frames:int)->PackedVector2Array:
-	var fill_size :int = Global.loop_length * Global.audioserver_mix_rate
+	var fill_size :int = loop_length * Global.audioserver_mix_rate
 	fill_size -= data_limit
 	var temp_frames : PackedVector2Array = []
 	if fill_size>0:
@@ -166,9 +173,7 @@ func zero_fill(frames:int)->PackedVector2Array:
 	return temp_frames
 	
 func update_waveform_box()->void:
-	if Global.sync_loop == null or Global.sync_loop == $MyLoop:
-		$nullbox.set_stretch_ratio(0.0)
-		$nullbox2.set_stretch_ratio(0.0)
+
 #	else:
 #		if record_start_p>0.0:
 #			$
@@ -199,11 +204,11 @@ func _on_record_toggled(button_pressed: bool) -> void:
 		$Play.set_pressed_no_signal(false)
 		$Play.set_disabled(true)
 		$Slide.set_disabled(true)
-		data_limit = Global.loop_length * Global.audioserver_mix_rate
+		data_limit = loop_length * Global.audioserver_mix_rate
 		if Global.sync_loop:
 			record_position = Global.sync_loop.get_playback_position()# + AudioServer.get_time_since_last_mix()
 			
-			segment_limit = (Global.loop_length - record_position) * Global.audioserver_mix_rate
+			segment_limit = (loop_length - record_position) * Global.audioserver_mix_rate
 			#record_position -= AudioServer.get_output_latency() + AudioServer.get_time_to_next_mix()
 			#record_position -= mic_capture.buffer_length
 		else:
@@ -214,11 +219,11 @@ func _on_record_toggled(button_pressed: bool) -> void:
 		#print("data size: ", data_size)
 	else:
 		recording = button_pressed
-		if Global.sync_loop == null:
-			Global.sync_loop = $MyLoop
+#		if Global.sync_loop == null:
+#			Global.sync_loop = $MyLoop
 		print(loop_name, " data is this big: ", loop_data.size())
 		print("Audio Server Mix Rate: ", AudioServer.get_mix_rate())
-		print("samples per second: ", loop_data.size()/Global.loop_length)
+		print("samples per second: ", loop_data.size()/loop_length)
 		#print("output latency: ", AudioServer.get_output_latency())
 		
 		var temp_path : String = Global.temp_dir+loop_name+".wav"
@@ -274,6 +279,8 @@ func create_wav(path: String)->void:
 	var f10 := 0 #Size of the data section.
 	file.store_32(f10)
 	#print("og header file_length: ", file.get_length(), " bytes.")
+	
+	print("size of loop_data: ", loop_data.to_byte_array().size())
 	
 	#add sound data
 	file.store_buffer(loop_data.to_byte_array())
@@ -406,3 +413,36 @@ func _on_slide_toggled(button_pressed: bool) -> void:
 func _on_record_timer_timeout() -> void:
 	$RecordTimer/PopupPanel.visible = false
 	
+
+
+func _on_volume_toggled(button_pressed: bool) -> void:
+	volume_slider.set_process(button_pressed)
+	volume_slider.set_visible(button_pressed)
+	pass # Replace with function body.
+
+
+func _on_loop_length_value_changed(value: float) -> void:
+	loop_length = value
+
+			
+			
+
+
+func _on_add_pressed() -> void:
+	var loop :Node = load("res://loop.tscn").instantiate()
+	get_parent().add_child(loop)
+	if Global.loops_ready >= 2:
+		for l in get_tree().get_nodes_in_group("loop"):
+			l.get_node("delete").set_disabled(false)
+			
+	print()
+
+
+
+func _on_delete_pressed() -> void:
+	Global.loops_ready -= 1
+	if Global.loops_ready == 1:
+		for l in get_tree().get_nodes_in_group("loop"):
+			l.get_node("delete").set_disabled(true)
+	self.queue_free()
+
